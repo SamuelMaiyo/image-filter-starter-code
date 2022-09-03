@@ -1,7 +1,8 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { Router, Request, Response } from 'express';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import { Router, Request, Response } from 'express';
+import axios from 'axios';
 
 (async () => {
 
@@ -29,36 +30,48 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
   /**************************************************************************** */
-
   //! END @TODO1
-  
-  app.get("/filteredimage", async (req: Request, res: Response) => {
-    const image_url = req.query.image_url.toString();
-    
-    if(!image_url) {
-      return res.status(400).json({"No image url was provided": false});
+  app.get('/filteredimage' , async(req: Request, res: Response ) => {
+
+    let  {image_url}  = req.query;
+    // checking if image url is null
+    if ( !image_url ) {
+     return  res.status(400)
+                .send('An image url is required')
     }
     try {
-      let imageFile = await filterImageFromURL(image_url);
-      console.log(imageFile);
-
-      return res.status(200).sendFile(imageFile, () => {
-        deleteLocalFiles([imageFile]);
+      const filteredpath: string = await filterImageFromURL(image_url);
+      console.log(filteredpath)
+      await res.status(200).sendFile(filteredpath, {}, (error) => {
+        if (error) {
+          return res.status(422).send(`Unable to process image`);
+        }
+        deleteLocalFiles([filteredpath]);
       });
-    } catch (error) {
-      return res.status(422).send("This image file could not be downloaded.");
     }
-    
+
+    catch (err) {
+      res.status(422).send(`Kindly crosscheck the image_url`);
+    }
+
   });
 
-  
+
+    // let {filtered_image} = await filterImageFromURL(image_url)
+
+    // return res.status(200)
+    //           .send(`Welcome to the Cloud, ${filtered_image}!` )
+
+
+
+
   // Root Endpoint
   // Displays a simple message to the user
   app.get( "/", async ( req, res ) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
   
- 
+
   // Start the Server
   app.listen( port, () => {
       console.log( `server running http://localhost:${ port }` );
